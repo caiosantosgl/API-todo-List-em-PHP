@@ -25,6 +25,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Apache
 RUN a2enmod rewrite
 
+RUN echo 'ErrorLog /dev/stderr' >> /etc/apache2/apache2.conf
+RUN echo 'CustomLog /dev/stdout combined' >> /etc/apache2/apache2.conf
+
 WORKDIR /var/www/html
 
 # Copia os arquivos do Composer primeiro
