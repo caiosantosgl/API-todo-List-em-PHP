@@ -1,0 +1,11 @@
+/vendor
+
+firebase_credentials.json
+
+.env
+
+.DS_Store
+
+.idea
+
+.vscode
