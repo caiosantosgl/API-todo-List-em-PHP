@@ -12,39 +12,58 @@
         private $firestore;
 
         private function __construct(){
-            $firebaseCredentials = getenv('FIREBASE_CREDENTIALS');
+            try {
+                $firebaseCredentials = getenv('FIREBASE_CREDENTIALS');
 
-            if ($firebaseCredentials) {
+                if ($firebaseCredentials) {
 
-                $credenciais = json_decode($firebaseCredentials, true);
+                    $credenciais = json_decode($firebaseCredentials, true);
 
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \Exception("As credenciais do Firebase são inválidas.");
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new \Exception(
+                            "As credenciais do Firebase são inválidas: " .
+                            json_last_error_msg()
+                        );
+                    }
+
+                    $factory = (new Factory)
+                        ->withServiceAccount($credenciais);
+
+                } else {
+
+                    $caminhoCredenciais = __DIR__ . '/../firebase_credentials.json';
+
+                    if (!file_exists($caminhoCredenciais)) {
+                        throw new \Exception(
+                            "FIREBASE_CREDENTIALS não configurada e " .
+                            "firebase_credentials.json não encontrado."
+                        );
+                    }
+
+                    putenv("GOOGLE_APPLICATION_CREDENTIALS={$caminhoCredenciais}");
+
+                    $factory = (new Factory)
+                        ->withServiceAccount($caminhoCredenciais);
                 }
 
-                $factory = (new Factory)
-                    ->withServiceAccount($credenciais);
+                $this->auth = $factory->createAuth();
 
-            } else {
-                $caminhoCredenciais = __DIR__ . '/../firebase_credentials.json';
+                $this->firestore = $factory
+                    ->createFirestore()
+                    ->database();
 
-                if (!file_exists($caminhoCredenciais)) {
-                    throw new \Exception(
-                        "Arquivo firebase_credentials.json não encontrado."
-                    );
-                }
+            } catch (\Throwable $e) {
 
-                putenv("GOOGLE_APPLICATION_CREDENTIALS={$caminhoCredenciais}");
+                http_response_code(500);
 
-                $factory = (new Factory)
-                    ->withServiceAccount($caminhoCredenciais);
+                header('Content-Type: application/json; charset=utf-8');
+
+                die(json_encode([
+                    "sucesso" => false,
+                    "erro" => $e->getMessage(),
+                    "tipo" => get_class($e)
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             }
-
-            $this->auth = $factory->createAuth();
-
-            $this->firestore = $factory
-                ->createFirestore()
-                ->database();
         }
 
         public static function pegarInstancia(){
